@@ -3,6 +3,17 @@
 // Avatar padrão em SVG (Base64) utilizado quando o usuário não faz upload de foto
 const AVATAR_PADRAO = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2394a3b8"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>';
 
+// Escapa HTML para evitar XSS ao montar as linhas da tabela
+function escaparHTML(valor) {
+    if (valor === null || valor === undefined) return '';
+    return String(valor)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     carregarTabelaFuncionarios();
 
@@ -85,15 +96,19 @@ async function carregarTabelaFuncionarios() {
         if (funcionarios && funcionarios.length > 0) {
             funcionarios.forEach(f => {
                 // Se f.foto_url não existir ou for vazia, usa o AVATAR_PADRAO
-                const imgSrc = (f.foto_url && f.foto_url.trim() !== '') ? f.foto_url : AVATAR_PADRAO;
+                let imgSrc = (f.foto_url && f.foto_url.trim() !== '') ? f.foto_url.trim() : AVATAR_PADRAO;
+                // Só aceita URLs http(s) ou data:image (evita javascript: URLs)
+                if (!/^(https?:\/\/|data:image\/)/i.test(imgSrc)) {
+                    imgSrc = AVATAR_PADRAO;
+                }
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><img src="${imgSrc}" alt="${f.nome}" class="avatar-img"></td>
-                    <td><strong>${f.nome}</strong></td>
-                    <td>${f.email}</td>
-                    <td><span class="badge">${f.cargo || '-'}</span></td>
-                    <td>${f.departamento || '-'}</td>
+                    <td><img src="${escaparHTML(imgSrc)}" alt="${escaparHTML(f.nome)}" class="avatar-img"></td>
+                    <td><strong>${escaparHTML(f.nome)}</strong></td>
+                    <td>${escaparHTML(f.email)}</td>
+                    <td><span class="badge">${escaparHTML(f.cargo) || '-'}</span></td>
+                    <td>${escaparHTML(f.departamento) || '-'}</td>
                 `;
                 tbody.appendChild(tr);
             });
